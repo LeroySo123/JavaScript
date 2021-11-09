@@ -1,0 +1,240 @@
+<link rel="stylesheet" type="text/css" href="/SiteAssets/css/jquery.dataTables.css"> 
+<script type="text/javascript" charset="utf8" src="/SiteAssets/js/jquery.dataTables.js"></script>
+
+<script>
+var ListName = 'DevelopCalendar';
+var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+var date = new Date();
+
+
+function getData(strListTitle, viewXml, isSearchByDay) {
+    var currentSite = _spPageContextInfo.webAbsoluteUrl;
+    $.ajax({
+        type: "POST",
+        async: true,
+        headers: {
+            "accept": "application/json;odata=verbose",
+            "content-type": "application/json;odata=verbose",
+            "X-RequestDigest": $("#__REQUESTDIGEST").val()
+        },
+        // $top5 has been used to get only 5 values from top.
+        url: currentSite + '/_api/web/Lists/GetByTitle(\''+strListTitle +'\')/GetItems(query=@v1)?@v1={"ViewXml":"' + viewXml + '"}',
+        success: function (data) {
+            createEventTable(data, isSearchByDay);
+        },
+        failure: function (error) { console.log('Error in AJAX: ' + error.message);}
+    });
+}
+
+
+function getCalendarDatabyDay(Time){
+	
+var tzoffset = (new Date()).getTimezoneOffset() * 60000; //offset in milliseconds
+	
+var startTime = new Date(Time.toString());
+startTime.setHours(0,0,0,0);
+var setStartTime = (new Date(startTime - tzoffset)).toISOString().slice(0, -5) + "Z";
+
+var endTime = new Date(Time.toString());
+endTime.setHours(23,59,59,999);
+var setEndTime = (new Date(endTime - tzoffset)).toISOString().slice(0, -5) + "Z";
+
+
+var caml = "<View><Query><Where>"+
+"<And><And><And><And><Leq><FieldRef Name='EventDate'/><Value Type='Datetime'>"+ setEndTime +"</Value></Leq>"+
+"<Geq><FieldRef Name='EndDate'/><Value Type='Datetime'>"+ setStartTime +"</Value></Geq></And>"+
+"<Neq><FieldRef Name='Category'/><Value Type='Text'>Holiday</Value></Neq></And>"+
+"<Eq><FieldRef Name='fAllDayEvent' /><Value Type='AllDayEvent'>Fales</Value></Eq></And>"+
+"<Or><Eq><FieldRef Name='Persons' /><Value Type='Integer'><UserID /></Value></Eq><IsNull><FieldRef Name='Persons' /></IsNull></Or></And>"+
+"</Where><OrderBy><FieldRef Name='Title' /></OrderBy></View></Query>"; 
+//console.log("day: " + caml);     
+getData(ListName, caml, true);
+}
+
+
+function getCalendarDatabyMth(Getmth){
+var tzoffset = (new Date()).getTimezoneOffset() * 60000; //offset in milliseconds
+var firstDay = new Date(Getmth.getFullYear(), Getmth.getMonth(), 1);
+firstDay.setHours(0,0,0,0);
+console.log(firstDay);
+var lastDay = new Date(Getmth.getFullYear(), Getmth.getMonth() + 1, 0);
+lastDay.setHours(23,59,59,999);
+console.log(lastDay);
+
+var newfirstDay = (new Date(firstDay - tzoffset)).toISOString().slice(0, -5) + "Z";
+var newlastDay = (new Date(lastDay - tzoffset)).toISOString().slice(0, -5) + "Z";
+
+
+var caml = "<View><Query><Where>"+
+"<And><And><And><And><Geq><FieldRef Name='EventDate'/><Value Type='Datetime'>"+ newfirstDay +"</Value></Geq>"+
+"<Leq><FieldRef Name='EndDate'/><Value Type='Datetime'>"+ newlastDay +"</Value></Leq></And>"+
+"<Neq><FieldRef Name='Category'/><Value Type='Text'>Holiday</Value></Neq></And>"+
+"<Eq><FieldRef Name='fAllDayEvent' /><Value Type='AllDayEvent'>Fales</Value></Eq></And>"+
+"<Or><Eq><FieldRef Name='Persons' /><Value Type='Integer'><UserID /></Value></Eq><IsNull><FieldRef Name='Persons' /></IsNull></Or></And>"+
+"</Where><OrderBy><FieldRef Name='EventDate' /></OrderBy></View></Query>"; 
+
+//console.log("mth:" + caml);     
+getData(ListName, caml, false);
+}
+
+
+function setCalendarButton(){
+  $("#AsynchronousViewDefault_CalendarView .ms-acal-summary-dayrow td").click(function(e){getCalendarDatabyDay($(this).attr( "date" )); return false;});
+}
+
+
+function createEventTable(data, isSearchByDay){
+	//console.log(data.d.results.length);
+	//console.log(data.d.results);
+	var tableTemplate = "<table id=\"eventTable\"><thead><tr><th>StartDate</th><th>Title</th><th>IsNew</th></tr></thead>{0}</table>";
+	var tdEvent = "";
+	//console.log("start: " + tdEvent);
+	if(data.d.results.length >0)
+	{
+		for(var EventNum in data.d.results)
+		{
+			var isNewURL = data.d.results[EventNum].isNew;
+			if( isNewURL == null || isNewURL == "")
+				isNewURL = "";
+			else
+				isNewURL = "<img src='"+ isNewURL.Url + "' width='40' >";
+			var Eventstartday = new Date(data.d.results[EventNum].EventDate);
+			var EventsEndday = new Date(data.d.results[EventNum].EndDate);
+			var EventsMonth = monthNames[Eventstartday.getMonth()]
+			
+			tdEvent += "<tr><td width='20%'>"+
+    "<div class='date'>"+
+		"<span class='day'>"+ Eventstartday.getDate() +"</span>"+
+		"<span class='month'>"+ EventsMonth +"</span>"+
+    "</div>"+
+"</td><td>"+
+"<a title='Start time: "+ ChangeTheDateFormat(Eventstartday)+"   End time: "+ ChangeTheDateFormat(EventsEndday) +"' class=\"eventTableButton\" onclick=\"javascript:SP.UI.ModalDialog.ShowPopupDialog('/_layouts/15/DPortal/DevelopCalendarItem.aspx?ID="+ data.d.results[EventNum].ID +"')\">"+ data.d.results[EventNum].Title +"</a>"+
+"</td><td width='20%'>" + isNewURL + "</td></tr>";
+		
+		}
+	}
+	else{
+		tdEvent = "<tr><td width='20%'></td><td>Did not have event!</td><td width='20%'></td></tr>";
+	}
+	if(isSearchByDay)
+	{
+		tdEvent += "<tr><td><a class=\"eventTableButton\" onclick=\"getCalendarDatabyMth(date)\">Return</a></td><td></td><td></td></tr>";
+	}
+	//console.log(tdEvent);
+	tableTemplate = tableTemplate.replace("{0}", tdEvent);
+	$(".DayofEvent").html(tableTemplate);
+	//console.log(tableTemplate);
+
+	$('#eventTable').DataTable({searching: false,
+		ordering: false,
+    	bLengthChange: false,
+        bFilter: false,
+        bInfo: false,
+        pageLength: 3,
+        pagingType: "numbers"
+		});
+}
+
+
+function clickNextAddMonth(){
+	var getcurrentMonth =$(".ms-acal-display").html();
+	getcurrentMonth = "01 " + getcurrentMonth;
+	var currentMonth = new Date(getcurrentMonth);
+	currentMonth.setMonth(currentMonth.getMonth() + 1)
+	getCalendarDatabyMth(currentMonth);
+}
+
+function clickPrevAddMonth(){
+	var getcurrentMonth =$(".ms-acal-display").html();
+	getcurrentMonth = "01 " + getcurrentMonth;
+	var currentMonth = new Date(getcurrentMonth);
+	/*date.setMonth(date.getMonth() - 1)
+	getCalendarDatabyMth(date);*/
+	currentMonth.setMonth(currentMonth.getMonth() - 1)
+	getCalendarDatabyMth(currentMonth);
+}
+
+
+function ChangeTheDateFormat(date){
+	var NewDateFormat = date.getMonth()+1 + "/" + date.getDate() + "/" + date.getFullYear();
+	return NewDateFormat;
+}
+
+function ChangeTheDateFormatToddmmyyyy(date){
+	var month = date.getMonth()+1
+	var NewDateFormat = date.getDate() + "/" + month + "/" + date.getFullYear();
+	return NewDateFormat;
+}
+
+
+function SettheCalendarHeader(){
+	$(".ms-acal-month tr:first").replaceWith("<tr><td></td><td>Mon</td><td>Tue</td><td>wed</td><td>Thu</td><td>Fir</td><td style='color: red;'>Sat</td><td style='color: red;'>Sun</td></tr>");
+}
+
+
+LoadSodByKey("SP.UI.ApplicationPages.Calendar.js", function () {
+    WaitForCalendarToLoad();
+});
+function WaitForCalendarToLoad() {
+    //running your function for the first time IF YOU NEED TO!
+    $("#AsynchronousViewDefault_CalendarView .ms-acal-headerentity").html("<a href='javascript:GotoCurrentDate();'>Go to current month</a>");
+    ChangeDaysName();
+	setCalendarButton();
+
+    var _onItemsSucceed = 
+     SP.UI.ApplicationPages.CalendarStateHandler.prototype.onItemsSucceed; 
+     SP.UI.ApplicationPages.CalendarStateHandler.prototype.onItemsSucceed = 
+       function($p0, $p1) { 
+            _onItemsSucceed.call(this, $p0, $p1);
+        //now let it call your function each time the calendar is loaded
+        $("#AsynchronousViewDefault_CalendarView .ms-acal-headerentity").html("<a href='javascript:GotoCurrentDate();'>Go to current month</a>");
+       ChangeDaysName();
+	   setCalendarButton();
+	   	var getcurrentMonth =$(".ms-acal-display").html();
+		getcurrentMonth = "01 " + getcurrentMonth;
+		var currentMonth = new Date(getcurrentMonth);
+		date = currentMonth;
+		getCalendarDatabyMth(currentMonth);
+    }
+}
+function ChangeDaysName(){
+    $("table.ms-acal-month > tbody > tr > th.ms-acal-month-top").each(function(){
+        //get the first 3 chars from day name
+        $cell = $(this).text().substring(0,3);
+        $(this).text($cell);
+
+   });
+}
+
+function GotoCurrentDate(){
+	var GetMoveCalFunction = $( "#AsynchronousViewDefault_CalendarView a[id*='nav_prev_a']" ).attr('href');
+	var GetFunctionValue = GetMoveCalFunction.split("'");
+	date = new Date();
+	MoveToDate(date.toDateString(),'WPQ11');
+	//getCalendarDatabyMth(date);
+}
+
+
+$( document ).ready(function() {
+/*
+    $( "#AsynchronousViewDefault_CalendarView a[id*='nav_prev_a']" ).click(function() {
+  //setCalendarButton();
+  clickPrevAddMonth();
+  
+});
+
+$( "#AsynchronousViewDefault_CalendarView a[id*='nav_next_a']" ).click(function() {
+  //setCalendarButton();
+  clickNextAddMonth();
+});
+*/
+
+//getCalendarDatabyMth(date);
+});
+</script>
+
+
+
+<div class="DayofEvent">
+</div>

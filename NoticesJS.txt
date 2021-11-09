@@ -1,0 +1,110 @@
+<link rel="stylesheet" href="/SiteAssets/js/mobile-carousel-eclipse/eclipse.css?v3"></link>
+<script src="/SiteAssets/js/mobile-carousel-eclipse/eclipse.js?v3"></script>
+<script>
+var PageSize = 6;
+var divSlider ="<div id='eclipse1'>"+
+                        "<div class='eclipse-slider'>"+
+						"{0}"+
+						 "</div>"+
+                    "</div>"
+
+var SliderHTML ="";
+
+var NoticesTemplate ="<table style='width: 100%;'>"+
+"<tr class='NoticeTr'><td style='width: 10%;'>{IMG#0}</td><td class='NoticesTilteTd NoticesTdborder'>{Title#0}</td><td style='width: 10%;'>{IMG#1}</td><td class='NoticesTilteTd'>{Title#1}</td></tr>"+
+"<tr class='NoticeTr'><td style='width: 10%;'>{IMG#2}</td><td class='NoticesTilteTd NoticesTdborder'>{Title#2}</td><td style='width: 10%;'>{IMG#3}</td><td class='NoticesTilteTd'>{Title#3}</td></tr>"+
+"<tr class='NoticeTr'><td style='width: 10%;'>{IMG#4}</td><td class='NoticesTilteTd NoticesTdborder'>{Title#4}</td><td style='width: 10%;'>{IMG#5}</td><td class='NoticesTilteTd'>{Title#5}</td></tr>"+
+"</table>";
+
+var AnnouncementLibName = "Notices";
+
+function GetNoticesItem() {
+	var today = new Date();	
+	var listdata = $.ajax
+        ({
+            url: _spPageContextInfo.webAbsoluteUrl + "/_api/web/lists/getByTitle('" + AnnouncementLibName + "')/items?$select=ID,DisplayTitle,Images,Modified,AttachmentFiles&$expand=AttachmentFiles&$filter=Expires ge '" + ChangeTheDateFormat(today) + "'&$top=18&$orderby=Modified desc",
+            method: "GET",
+            headers:
+               {
+                   "Accept": "application/json;odata=verbose"
+               },
+	    async: false,
+            success: function (data, status, xhr) {
+                dataresults = data.d;
+                console.log(dataresults);
+                return(dataresults);
+            },
+            error: function (xhr, status, error) {
+                dataresults = "Failed";
+				return(dataresults);
+            }
+        });
+		return listdata;
+}
+
+
+$( document ).ready(function() {
+var NoticesData = GetNoticesItem();
+var itemcount = NoticesData.responseJSON.d.results.length;
+var PageNum = Math.ceil(itemcount/PageSize);
+var PagestartNum = 0;
+var PageEndNum = 6;
+for(y = 0; y<PageNum ; y++)
+{
+	var itemNum = 0;
+	var NoticesTemplate ="<table style='width: 100%;'>"+
+"<tr class='NoticeTr'><td style='width: 10%;'>{IMG#0}</td><td class='NoticesTilteTd NoticesTdborder'>{Title#0}</td><td style='width: 10%;'>{IMG#1}</td><td class='NoticesTilteTd'>{Title#1}</td></tr>"+
+"<tr class='NoticeTr'><td style='width: 10%;'>{IMG#2}</td><td class='NoticesTilteTd NoticesTdborder'>{Title#2}</td><td style='width: 10%;'>{IMG#3}</td><td class='NoticesTilteTd'>{Title#3}</td></tr>"+
+"<tr class='NoticeTr'><td style='width: 10%;'>{IMG#4}</td><td class='NoticesTilteTd NoticesTdborder'>{Title#4}</td><td style='width: 10%;'>{IMG#5}</td><td class='NoticesTilteTd'>{Title#5}</td></tr>"+
+"</table>";
+		for (i = PagestartNum; i < PageEndNum; i++) { 
+			var NoticesItem = NoticesData.responseJSON.d.results[i];
+			if(NoticesItem != null)
+			{
+				var NoticesID = NoticesData.responseJSON.d.results[i].ID;
+				var NoticesDisplayTitle = NoticesData.responseJSON.d.results[i].DisplayTitle;
+				var NoticesImagesURL = NoticesData.responseJSON.d.results[i].Images;
+				var NoticesImages = NoticesData.responseJSON.d.results[i].AttachmentFiles
+				var NoticesModified = new Date(NoticesData.responseJSON.d.results[i].Modified);
+				var ImgHTML="";
+				var ImagesURL = "";
+					if( NoticesImages.results.length > 0)
+					{
+						//ImagesURL = NoticesImages.Url;
+						ImagesURL = NoticesImages.results[0].ServerRelativeUrl;
+						ImgHTML = "<img src='"+ ImagesURL +"' style='max-height: 47px;'>";
+					}
+					else if (NoticesImagesURL != null)
+					{
+						ImagesURL = NoticesImagesURL.Url;
+						ImgHTML = "<img src='"+ ImagesURL +"' style='max-height: 47px;'>";
+					}
+
+				NoticesModified.setDate(NoticesModified.getDate() + 3);
+				var today = new Date();		
+				if (NoticesModified >= today){
+					NoticesDisplayTitle += "&nbsp;&nbsp;<img src='/Style Library/Images/new.png'>"
+				}
+				var TitleHtml ="<a class='NoticesTitleButton' onclick=\"javascript:SP.UI.ModalDialog.OpenPopUpPage('/_layouts/15/DPortal/Notices.aspx?ID="+ NoticesID +"', null, 1520,null)\">"+ NoticesDisplayTitle +"</a>";
+				NoticesTemplate = NoticesTemplate.replace("{IMG#"+ itemNum +"}", ImgHTML);
+				NoticesTemplate = NoticesTemplate.replace("{Title#"+ itemNum +"}", TitleHtml);
+			}
+			else{
+				NoticesTemplate = NoticesTemplate.replace("{IMG#"+ itemNum +"}", "");
+				NoticesTemplate = NoticesTemplate.replace("{Title#"+ itemNum +"}", "");
+			}
+			itemNum++;
+		}
+		PagestartNum = PagestartNum + PageSize;
+		PageEndNum = PageEndNum + PageSize;
+		SliderHTML += NoticesTemplate
+}
+divSlider = divSlider.replace("{0}", SliderHTML);
+$(".NoticesInfor").html(divSlider);
+//console.log(WhatsNewTemplate);
+$('#eclipse1').eclipse();
+});
+</script>
+
+<div class="NoticesInfor">
+</div>

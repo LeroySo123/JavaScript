@@ -1,0 +1,121 @@
+<script type="text/javascript">
+var LinksTemplate ='<link href="/SiteAssets/css/jquery-ui.css" rel="stylesheet"/>' +
+'<div class="ui-tabs ui-corner-all ui-widget" id="tabs">'+
+   '<ul class="ui-tabs-nav ui-corner-all ui-helper-reset ui-helper-clearfix ui-widget-header" role="tablist">' +
+      '<li class="ui-tabs-tab ui-corner-top ui-tab ui-tabs-active LinkTab LinkTab-active" role="tab" aria-expanded="true" aria-selected="true" aria-controls="tabs-1" aria-labelledby="ui-id-1">' +
+         '<a tabindex="-1" class="ui-tabs-anchor chagneTab" id="ui-id-1" role="presentation" tab="DEVSite1">DEV(Site1)</a></li>' +
+	  '<li class="ui-tabs-tab ui-corner-top ui-tab ui-tabs-active LinkTab" role="tab" aria-expanded="true" aria-selected="true" aria-controls="tabs-2" aria-labelledby="ui-id-2">' +
+         '<a tabindex="-1" class="ui-tabs-anchor chagneTab" id="ui-id-2" role="presentation" tab="DEVSite2">DEV(Site2)</a></li>' +
+      //'<li tabindex="-1" class="ui-tabs-tab ui-corner-top ui-tab LinkTab" role="tab" aria-expanded="false" aria-selected="false" aria-controls="tabs-3" aria-labelledby="ui-id-3">' +
+        // '<a tabindex="-1" class="ui-tabs-anchor chagneTab" id="ui-id-3" role="presentation">SIT</a></li>' +
+      //'<li tabindex="-1" class="ui-tabs-tab ui-corner-top ui-tab LinkTab" role="tab" aria-expanded="false" aria-selected="false" aria-controls="tabs-4" aria-labelledby="ui-id-4">' +
+        // '<a tabindex="-1" class="ui-tabs-anchor chagneTab" id="ui-id-4" role="presentation">UAT</a></li>' +
+   '</ul>' +
+   '{0}'+
+'</div>';
+
+var TabTamplate = '<div class="ui-tabs-panel ui-corner-bottom ui-widget-content forHide" id="{0}" role="tabpanel" style="display: none;">' + 
+      '<ul>' +
+	  '{1}' +
+      '</ul>' +
+   '</div>';
+   
+
+var ItemTamplate = '<li><a href="{0}" target="_blank"><span style="color: #894189;">{1}</span></a><br/></li>';
+
+
+function GetLinksItem() {
+	var listdata = $.ajax
+        ({
+            url: _spPageContextInfo.webAbsoluteUrl + "/_api/web/lists/getByTitle('Application Links')/items?$select=ID,URL,Comments,Category",
+            method: "GET",
+            headers:
+               {
+                   "Accept": "application/json;odata=verbose"
+               },
+			async: false,
+            success: function (data, status, xhr) {
+                dataresults = data.d;
+                return(dataresults);
+            },
+            error: function (xhr, status, error) {
+                dataresults = "Failed";
+				return(dataresults);
+            }
+        });
+		return listdata;
+}
+
+$( document ).ready(function() {
+var Categories  = ["DEVSite1","DEVSite2"];
+var LinksData = GetLinksItem();
+var dropdownCategory;
+var Links = "";
+var draftTab ="";
+var Tab = "";
+for(var CategoryID in Categories)
+{
+	var Category = Categories[CategoryID];
+	//----------for--------
+	var draftItem ="";
+	var Item = "";
+	for(var LinksItem in LinksData.responseJSON.d.results)
+	{
+		var LinksCategory = LinksData.responseJSON.d.results[LinksItem].Category;
+		if( LinksCategory == Category)
+		{
+			var ItemURL = LinksData.responseJSON.d.results[LinksItem].URL;
+			var ItemDescription = "";
+			if( ItemURL != null || ItemURL != "")
+			{
+				ItemDescription = ItemURL.Description;
+				ItemURL = ItemURL.Url;
+				draftItem = ItemTamplate.replace("{0}", ItemURL);
+				Item += draftItem.replace("{1}", ItemDescription);
+			}
+					
+			
+		}
+	}
+	draftTab = TabTamplate.replace("{0}", Category);
+	Tab += draftTab.replace("{1}", Item);
+	//console.log(Tab);
+}
+	Links = LinksTemplate.replace("{0}", Tab);
+	//console.log(Links);
+	$(".ApplicationLinks").html(Links);
+	$("#DEVSite1").show();
+	
+	$('.chagneTab').click(function(e){
+	//var TargetTabName = "#"+$(this).text();
+	var TargetTabName = "#"+$(this).attr("tab");
+	$(".forHide").hide();
+	$(TargetTabName).show();
+	$('.chagneTab').parent().removeClass('ui-tabs-active LinkTab-active');
+	$(this).parent().addClass('ui-tabs-active LinkTab-active');
+	});
+	
+	
+	/*for home page web part open in new tab*/
+	var UserfulLinks = $("table[summary*='Userful Links']>tbody tr td:first-child a");
+
+	UserfulLinks.each(function(){
+		 $(this).attr("target", "_blank");
+	});
+	 
+
+
+	var ReleaseSummary = $("table[summary*='ReleaseSummary']>tbody tr td:first-child a");
+
+	ReleaseSummary.each(function(){
+		 $(this).attr("target", "_blank");
+	});
+	/*for home page web part open in new tab*/
+	
+});	
+</script>	
+	
+	
+	
+<div class="ApplicationLinks">
+</div>

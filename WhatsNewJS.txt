@@ -1,0 +1,91 @@
+<script>
+var LibName = "Framework Documents";
+var WhatsNewTemplate ="<table style='width: 100%;'><tr><th></th><th align='left'>File Name</th><th align='right'>Last modified date</th></tr>{0}</table>";
+
+
+function GetListItemById() {
+	var listdata = $.ajax
+        ({
+            url: _spPageContextInfo.webAbsoluteUrl + "/_api/web/lists/getByTitle('" + LibName + "')/items?$select=FileLeafRef,FileRef,Modified,DocIcon&$filter=DocIcon ne null&$top=10&$orderby=Modified desc",
+            method: "GET",
+            headers:
+               {
+                   "Accept": "application/json;odata=verbose"
+               },
+	    async: false,
+            success: function (data, status, xhr) {
+                dataresults = data.d;
+                return(dataresults);
+            },
+            error: function (xhr, status, error) {
+                dataresults = "Failed";
+				return(dataresults);
+            }
+        });
+		return listdata;
+}
+
+$( document ).ready(function() {
+var FileData = GetListItemById();
+var FileTable ="";
+for(var FileNum in FileData.responseJSON.d.results)
+{
+	var FileName = FileData.responseJSON.d.results[FileNum].FileLeafRef;
+	var FileURL = FileData.responseJSON.d.results[FileNum].FileRef;
+	var FileModified = new Date(FileData.responseJSON.d.results[FileNum].Modified);
+	var FileDocIcon = FileData.responseJSON.d.results[FileNum].DocIcon;
+	
+	//console.log(FileData.responseJSON.d.results[FileNum]);
+	var Fileicon = "";
+	switch (FileDocIcon.toLowerCase()) {
+  case "docx":
+  case "doc":
+  case "dot":
+    Fileicon = "<img width='16' height='16' border='0' src='/_layouts/15/images/ICDOC.gif' class=' ms-draggable'>";
+    break; 
+  case "gif":
+  case "bmp":
+  case "jpg":
+  case "jpeg":
+    Fileicon = "<img width='16' height='16' border='0' src='/_layouts/15/images/ICJPEG.gif' class=' ms-draggable'>";
+    break; 
+  case "ppt":
+  case "ptm":
+  case "pptm":
+  case "pptx":
+  case "potx":
+  Fileicon = "<img width='16' height='16' border='0' src='/_layouts/15/images/ICPPT.gif' class=' ms-draggable'>";
+  break; 
+  case "xlsx":
+  case "xls":
+  case "xla":
+  case "xlsm":
+  case "xltx":
+  Fileicon = "<img width='16' height='16' border='0' src='/_layouts/15/images/ICXLSX.gif' class=' ms-draggable'>";
+  break; 
+  case "txt":
+  Fileicon = "<img width='16' height='16' border='0' src='/_layouts/15/images/ICTXT.gif' class=' ms-draggable'>";
+  break; 
+    case "pdf":
+  Fileicon = "<img width='16' height='16' border='0' src='/_layouts/15/images/ICPDF.png' class=' ms-draggable'>";
+  break; 
+  case "htm":
+  case "html":
+  Fileicon = "<img width='16' height='16' border='0' src='/_layouts/15/images/ICHTM.gif' class=' ms-draggable'>";
+  break;
+  default: 
+    Fileicon = "<img width='16' height='16' border='0' src='/_layouts/15/images/ICGEN.gif' class=' ms-draggable'>";
+}
+
+	FileTable += "<tr><td style='width: 5%;'>"+ Fileicon +"</td><td><a href='"+ FileURL +"?Web=1' target='_blank'>"+ FileName +"</a></td><td align='right' style='width: 20%;'>"+ ChangeTheDateFormatToddmmyyyy(FileModified) +"</td>"
+
+}
+WhatsNewTemplate = WhatsNewTemplate.replace("{0}", FileTable);
+$(".NewsDoc").html(WhatsNewTemplate);
+//console.log(WhatsNewTemplate);
+});
+</script>
+
+
+<div class="NewsDoc" style="padding: 5px;">
+</div>
